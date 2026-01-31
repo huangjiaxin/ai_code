@@ -14,12 +14,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# 尝试导入 OpenAI，如果未安装则使用模拟模式
+# 尝试导入 Anthropic，如果未安装则使用模拟模式
 try:
-    from openai import AsyncOpenAI
-    OPENAI_AVAILABLE = True
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
 except ImportError:
-    OPENAI_AVAILABLE = False
+    ANTHROPIC_AVAILABLE = False
 
 app = FastAPI(title="Streaming AI Web Service")
 
@@ -36,18 +36,18 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     """查询请求模型"""
     query: str
-    model: str = "gpt-3.5-turbo"
+    model: str = "claude-sonnet-4-20250514"
 
 
 async def mock_stream_response(query: str) -> AsyncGenerator[str, None]:
     """
-    模拟流式响应（当没有配置 OpenAI API 时使用）
+    模拟流式响应（当没有配置 Anthropic API 时使用）
     """
     mock_response = f"这是对您问题「{query}」的模拟回答。\n\n"
-    mock_response += "由于未配置 OpenAI API Key，系统使用模拟模式。\n\n"
-    mock_response += "要使用真实的 AI 回答，请设置环境变量：\n"
+    mock_response += "由于未配置 Anthropic API Key，系统使用模拟模式。\n\n"
+    mock_response += "要使用真实的 Claude AI 回答，请设置环境变量：\n"
     mock_response += "```bash\n"
-    mock_response += "export OPENAI_API_KEY='your-api-key'\n"
+    mock_response += "export ANTHROPIC_API_KEY='your-api-key'\n"
     mock_response += "```\n\n"
     mock_response += "然后重启服务即可。"
 
@@ -59,26 +59,23 @@ async def mock_stream_response(query: str) -> AsyncGenerator[str, None]:
     yield "data: [DONE]\n\n"
 
 
-async def openai_stream_response(query: str, model: str) -> AsyncGenerator[str, None]:
+async def claude_stream_response(query: str, model: str) -> AsyncGenerator[str, None]:
     """
-    使用 OpenAI API 进行流式响应
+    使用 Anthropic Claude API 进行流式响应
     """
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     try:
-        stream = await client.chat.completions.create(
+        with client.messages.stream(
             model=model,
+            max_tokens=4096,
+            system="你是一个有帮助的AI助手，请用中文回答用户的问题。",
             messages=[
-                {"role": "system", "content": "你是一个有帮助的AI助手，请用中文回答用户的问题。"},
                 {"role": "user", "content": query}
             ],
-            stream=True,
-        )
-
-        async for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                content = chunk.choices[0].delta.content
-                yield f"data: {json.dumps({'content': content}, ensure_ascii=False)}\n\n"
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'content': text}, ensure_ascii=False)}\n\n"
 
         yield "data: [DONE]\n\n"
 
@@ -93,10 +90,10 @@ async def chat_stream(request: QueryRequest):
     流式聊天接口
     使用 Server-Sent Events (SSE) 返回流式响应
     """
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
 
-    if OPENAI_AVAILABLE and api_key:
-        generator = openai_stream_response(request.query, request.model)
+    if ANTHROPIC_AVAILABLE and api_key:
+        generator = claude_stream_response(request.query, request.model)
     else:
         generator = mock_stream_response(request.query)
 
@@ -116,8 +113,8 @@ async def health_check():
     """健康检查接口"""
     return {
         "status": "healthy",
-        "openai_available": OPENAI_AVAILABLE,
-        "api_key_configured": bool(os.getenv("OPENAI_API_KEY"))
+        "anthropic_available": ANTHROPIC_AVAILABLE,
+        "api_key_configured": bool(os.getenv("ANTHROPIC_API_KEY"))
     }
 
 

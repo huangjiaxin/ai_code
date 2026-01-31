@@ -185,14 +185,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>AI 流式问答</h1>
+            <h1>Claude 流式问答</h1>
             <p>基于 Server-Sent Events 的实时流式响应</p>
         </div>
 
         <div class="chat-container" id="chatContainer">
             <div class="message assistant">
                 <div class="bubble">
-                    你好！我是 AI 助手，有什么可以帮助你的吗？
+                    你好！我是 Claude 助手，有什么可以帮助你的吗？
                 </div>
             </div>
         </div>
@@ -373,7 +373,7 @@
                 const data = await response.json();
 
                 if (data.api_key_configured) {
-                    setStatus('已连接 OpenAI API', 'connected');
+                    setStatus('已连接 Claude API', 'connected');
                 } else {
                     setStatus('模拟模式 (未配置 API Key)', '');
                 }
