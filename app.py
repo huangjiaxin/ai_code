@@ -4,7 +4,6 @@ Streaming AI Web Service
 """
 
 import os
-import json
 import asyncio
 from typing import AsyncGenerator
 
@@ -13,6 +12,8 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from sse import SSE_DONE, sse_content, sse_error
 
 # 尝试导入 Anthropic，如果未安装则使用模拟模式
 try:
@@ -53,10 +54,10 @@ async def mock_stream_response(query: str) -> AsyncGenerator[str, None]:
 
     # 模拟流式输出，每次输出几个字符
     for char in mock_response:
-        yield f"data: {json.dumps({'content': char}, ensure_ascii=False)}\n\n"
+        yield sse_content(char)
         await asyncio.sleep(0.02)  # 模拟延迟
 
-    yield "data: [DONE]\n\n"
+    yield SSE_DONE
 
 
 async def claude_stream_response(query: str, model: str) -> AsyncGenerator[str, None]:
@@ -75,13 +76,13 @@ async def claude_stream_response(query: str, model: str) -> AsyncGenerator[str, 
             ],
         ) as stream:
             for text in stream.text_stream:
-                yield f"data: {json.dumps({'content': text}, ensure_ascii=False)}\n\n"
+                yield sse_content(text)
 
-        yield "data: [DONE]\n\n"
+        yield SSE_DONE
 
     except Exception as e:
-        yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
+        yield sse_error(str(e))
+        yield SSE_DONE
 
 
 @app.post("/api/chat")
