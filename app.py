@@ -54,6 +54,7 @@ async def mock_stream_response(query: str) -> AsyncGenerator[str, None]:
 
     # 模拟流式输出，每次输出几个字符
     for char in mock_response:
+        # 将单个字符封装为 SSE 内容帧并逐个推送给客户端
         yield sse_content(char)
         await asyncio.sleep(0.02)  # 模拟延迟
 
