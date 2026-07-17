@@ -94,6 +94,9 @@ class _FakeAnthropic:
         self.messages = _FakeMessages(texts)
 
 
+@pytest.mark.skipif(
+    not app.ANTHROPIC_AVAILABLE, reason="anthropic 包未安装"
+)
 async def test_claude_stream_response_success(monkeypatch):
     fake_client = _FakeAnthropic(["Hello", " ", "世界"])
     monkeypatch.setattr(
@@ -114,6 +117,9 @@ class _BoomAnthropic:
         self.messages = _BoomMessages()
 
 
+@pytest.mark.skipif(
+    not app.ANTHROPIC_AVAILABLE, reason="anthropic 包未安装"
+)
 async def test_claude_stream_response_error(monkeypatch):
     monkeypatch.setattr(
         app.anthropic, "Anthropic", _BoomAnthropic, raising=False
