@@ -13,20 +13,30 @@ def client():
     return TestClient(app.app)
 
 
-def _frames(text: str) -> list[str]:
-    """将 SSE 响应体拆成一条条帧"""
-    return [f for f in text.split("\n\n") if f.strip()]
+DATA_PREFIX = "data: "
+DONE_MARKER = "[DONE]"
+
+
+def _parse_sse(text: str) -> list[dict]:
+    """将 SSE 响应体解析为 JSON 事件负载列表（跳过 [DONE] 结束标记）。
+
+    每条 SSE 记录以空行分隔，且必须以 "data: " 开头；不符合的记录视为异常。
+    """
+    events = []
+    for record in text.strip().split("\n\n"):
+        if not record:
+            continue
+        assert record.startswith(DATA_PREFIX), f"非法 SSE 记录: {record!r}"
+        payload = record[len(DATA_PREFIX):]
+        if payload == DONE_MARKER:
+            continue
+        events.append(json.loads(payload))
+    return events
 
 
 def _contents(text: str) -> list[str]:
-    """提取所有 content 帧中的文本"""
-    out = []
-    for frame in _frames(text):
-        payload = frame[len("data: "):]
-        if payload == "[DONE]":
-            continue
-        out.append(json.loads(payload).get("content", ""))
-    return out
+    """提取所有 content 事件中的文本"""
+    return [e["content"] for e in _parse_sse(text) if "content" in e]
 
 
 # ---------- health ----------
