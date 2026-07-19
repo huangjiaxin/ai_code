@@ -126,6 +126,43 @@
             40% { transform: scale(1); }
         }
 
+        .model-selector {
+            padding: 12px 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .model-selector label {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .model-selector select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .model-selector select:focus {
+            border-color: #667eea;
+        }
+
+        .model-selector select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .input-container {
             padding: 20px;
             background: white;
@@ -199,6 +236,17 @@
 
         <div class="status" id="status">就绪</div>
 
+        <div class="model-selector">
+            <label for="modelSelect">模型</label>
+            <select id="modelSelect">
+                <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                <option value="claude-opus-4-20250514">Claude Opus 4</option>
+                <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet</option>
+                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+            </select>
+        </div>
+
         <div class="input-container">
             <input type="text" id="queryInput" placeholder="输入你的问题..." autocomplete="off">
             <button id="sendBtn" onclick="sendQuery()">发送</button>
@@ -210,6 +258,7 @@
         const queryInput = document.getElementById('queryInput');
         const sendBtn = document.getElementById('sendBtn');
         const status = document.getElementById('status');
+        const modelSelect = document.getElementById('modelSelect');
 
         let isStreaming = false;
 
@@ -278,6 +327,7 @@
 
             isStreaming = true;
             sendBtn.disabled = true;
+            modelSelect.disabled = true;
             queryInput.value = '';
 
             // 添加用户消息
@@ -294,7 +344,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ query: query }),
+                    body: JSON.stringify({ query: query, model: modelSelect.value }),
                 });
 
                 if (!response.ok) {
@@ -362,6 +412,7 @@
             } finally {
                 isStreaming = false;
                 sendBtn.disabled = false;
+                modelSelect.disabled = false;
                 queryInput.focus();
             }
         }
